@@ -1,10 +1,11 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { users } from 'refloat-nextjs-integration/app/mocks/users';
-import { plans } from 'refloat-nextjs-integration/app/mocks/plans';
-import UserDropdown from 'refloat-nextjs-integration/app/components/UserDropdown';
-import PricingPlan from 'refloat-nextjs-integration/app/components/PricingPlan';
+import { useState, useEffect } from "react"
+import { users } from "refloat-nextjs-integration/app/mocks/users"
+import { plans } from "refloat-nextjs-integration/app/mocks/plans"
+import { UserSelector } from "refloat-nextjs-integration/app/components/UserSelector"
+import { PricingCard } from "refloat-nextjs-integration/app/components/PricingCard"
+import { ThemeToggle } from "refloat-nextjs-integration/app/components/ThemeToggle"
 
 declare global {
   export interface TenantRefloatInitOptions {
@@ -28,15 +29,13 @@ declare global {
 export default function Home() {
   const REFLOAT_API_KEY = process.env.NEXT_REFLOAT_API_KEY;
   const REFLOAT_TENANT_ID = process.env.NEXT_REFLOAT_TENANT_ID;
-  const REFLOAT_SDK_URL = process.env.NEXT_NEXT_REFLOAT_SDK_URL;
 
-
-  const [activeTestCustomer, setActiveTestCustomer] = useState(users[0]);
+  const [activeTestCustomer, setActiveTestCustomer] = useState(users[0])
 
   const handleUserChange = (userId: string) => {
-    const newUser = users.find(u => u.id === userId);
-    if (newUser) setActiveTestCustomer(newUser);
-  };
+    const newUser = users.find(u => u.id === userId)
+    if (newUser) setActiveTestCustomer(newUser)
+  }
 
   const handleCancel = async () => {
     try {
@@ -49,6 +48,8 @@ export default function Home() {
       });
 
       const { hmac } = await response.json();
+
+      console.log('REFLOAT_API_KEY', REFLOAT_API_KEY)
 
       window.refloat?.init && window.refloat.init({
         tenantId: REFLOAT_TENANT_ID!, // Your Refloat Tenant ID
@@ -65,7 +66,7 @@ export default function Home() {
 
   useEffect(() => {
     const a = document.createElement('script');
-    a.src = REFLOAT_SDK_URL!;
+    a.src = 'https://staging-sdk.onrender.com/snippet.js';
     a.async = true;
     const b = document.getElementsByTagName('script')[0];
     b.parentNode?.insertBefore(a, b);
@@ -76,31 +77,45 @@ export default function Home() {
   }, []);
 
   return (
-    <main>
-      <UserDropdown activeUser={activeTestCustomer} onUserChange={handleUserChange} />
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center">
+          <nav className="flex flex-1 items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-xl font-semibold">ACME Corp. (Refloat Integration Demo)</h2>
+            </div>
+            <div className="flex items-center space-x-4">
+              <UserSelector testCustomers={users} activeTestCustomer={activeTestCustomer} onCustomerChange={handleUserChange} />
+              <ThemeToggle />
+            </div>
+          </nav>
+        </div>
+      </header>
 
-      <div className="py-6">
-        <div className="xl:container m-auto px-6 text-gray-500 md:px-12">
-          <h2 className="text-2xl text-gray-600 md:text-4xl">
-            A better way to <span className="text-blue-600 font-bold">supercharge</span> all aspects of customer retention
-            <br className="lg:block hidden" />
-            and <span className="text-blue-600 font-bold">optimize</span> your company's growth
-          </h2>
+      <main className="container py-16">
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <h1 className="scroll-m-20 text-5xl font-extrabold tracking-tight lg:text-6xl mb-6">
+            Supercharge Your{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
+              Customer Retention
+            </span>
+          </h1>
+          <p className="text-xl text-muted-foreground leading-relaxed">
+            Optimize your company's growth with our comprehensive solutions for managing and improving customer retention rates.
+          </p>
         </div>
 
-        <div className="xl:container m-auto px-6 my-6 md:px-12 lg:px-20">
-          <div className="grid items-center gap-6 md:grid-cols-2 lg:flex lg:space-x-8">
-            {plans.map(plan => (
-              <PricingPlan
-                key={plan.id}
-                plan={plan}
-                isActive={plan.id === activeTestCustomer.plan}
-                onCancel={handleCancel}
-              />
-            ))}
-          </div>
+        <div className="w-full grid gap-8 max-w-6xl mx-auto md:grid-cols-2 lg:grid-cols-3">
+          {plans.map((plan) => (
+            <PricingCard
+              key={plan.id}
+              plan={plan}
+              isActive={plan.id === activeTestCustomer.plan}
+              onCancel={handleCancel}
+            />
+          ))}
         </div>
-      </div>
-    </main>
-  );
+      </main>
+    </div>
+  )
 }
