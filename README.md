@@ -16,10 +16,15 @@ This documentation provides detailed instructions on how to integrate [**Refloat
   - [1. Include the Refloat SDK Script](#1-include-the-refloat-sdk-script)
   - [2. Generate Secure HMAC Hash](#2-generate-secure-hmac-hash)
   - [3. Initialize the Refloat SDK](#3-initialize-the-refloat-sdk)
+  - [4. TypeScript Type Definitions](#4-typescript-type-definitions)
 - [Authentication and Authorization](#authentication-and-authorization)
 - [Testing the Integration](#testing-the-integration)
 - [Troubleshooting](#troubleshooting)
 - [Additional Information](#additional-information)
+  - [Live Mode vs. Test Mode](#live-mode-vs-test-mode)
+  - [Subscription ID](#subscription-id)
+  - [Security Considerations](#security-considerations)
+  - [Handling Dark Mode in Next.js](#handling-dark-mode-in-nextjs)
 - [Conclusion](#conclusion)
 
 ---
@@ -273,6 +278,104 @@ export default function Home() {
 
 ---
 
+### 4. TypeScript Type Definitions
+
+When integrating the Refloat SDK into a TypeScript-based Next.js application, you might encounter TypeScript errors due to the absence of type definitions for the `window.refloat` object. To overcome these errors and ensure type safety, you should create a global declaration file that defines the necessary interfaces and extends the `Window` interface.
+
+#### Steps to Set Up TypeScript Definitions
+
+1. **Create a Type Declaration File**
+
+   Create a new file named `refloat.d.ts` in the root directory of your project (or in a suitable directory like `types/` if you prefer). This file will contain the type definitions for the Refloat SDK.
+
+   ```ts
+   // refloat.d.ts
+
+   // Declare the interface for Refloat initialization options
+   export interface TenantRefloatInitOptions {
+     readonly stripeCustomerId: string;
+     readonly stripeSubscriptionId?: string;
+     readonly tenantId: string;
+     readonly authHash: string;
+     readonly apiKey: string;
+     readonly playbookId?: string;
+     readonly mode?: 'test' | 'live';
+   }
+
+   // Extend the global Window interface to include the Refloat SDK
+   declare global {
+     interface Window {
+       refloat?: {
+         created?: boolean;
+         initialized?: boolean;
+         init?: (options: TenantRefloatInitOptions) => void;
+       };
+     }
+   }
+   ```
+
+   **Explanation:**
+
+   - `TenantRefloatInitOptions`: Defines the structure of the options object required by `window.refloat.init`.
+   - Extending the `Window` interface allows TypeScript to recognize `window.refloat` and provides proper type checking when you use it in your code.
+
+2. **Include the Type Declaration in `tsconfig.json`**
+
+   To ensure TypeScript recognizes the new type definitions, you need to include the `refloat.d.ts` file in your project's `tsconfig.json` configuration.
+
+   ```json
+   // tsconfig.json
+
+   {
+     "compilerOptions": {
+       // ... other compiler options ...
+       "typeRoots": ["./node_modules/@types", "./"], // Include the current directory
+       // ... other compiler options ...
+     },
+     "include": [
+       "next-env.d.ts",
+       "**/*.ts",
+       "**/*.tsx",
+       "refloat.d.ts" // IMPORTANT: Add this line
+     ],
+     "exclude": ["node_modules"]
+   }
+   ```
+
+   **Note:**
+
+   - Ensure that the `refloat.d.ts` file is included in the `include` array.
+   - Adjust the `typeRoots` if necessary to include custom type definitions.
+
+3. **Usage in Your Code**
+
+   With the type definitions in place, you can now use `window.refloat` in your TypeScript code without encountering type errors.
+
+   ```tsx
+   // Example usage in a component
+
+   const handleCancel = async () => {
+     // ... fetch HMAC hash ...
+
+     window.refloat?.init && window.refloat.init({
+       tenantId: process.env.NEXT_REFLOAT_TENANT_ID!,
+       apiKey: process.env.NEXT_REFLOAT_API_KEY!,
+       mode: "test",
+       stripeCustomerId: activeCustomer.id,
+       stripeSubscriptionId: activeCustomer.subscriptionId,
+       authHash: hmac,
+     });
+   };
+   ```
+
+   **Benefits:**
+
+   - Provides IntelliSense support in editors like VSCode.
+   - Ensures type safety and catches potential errors at compile time.
+   - Avoids the need to use TypeScript ignore comments (e.g., `// @ts-ignore`).
+
+---
+
 ## Authentication and Authorization
 
 Refloat's Public API implements authentication and authorization mechanisms to secure communications with the SDK running on the client (browser).
@@ -425,6 +528,91 @@ If you encounter issues during development or integration, refer to the followin
 - **Environment Variables:**
   - Use environment variables to manage sensitive information.
   - Consider using tools like `dotenv` for local development and secure secret management systems in production.
+
+### Handling Dark Mode in Next.js
+
+When implementing dark mode in your Next.js application, especially using UI component libraries or theme providers (like `next-themes`), you might encounter an issue where the Refloat cancellation modal renders with an unintended solid grey backdrop. This happens because some libraries set the `color-scheme` CSS property to `dark` on the `<html>` root element, which can affect the rendering of child components and iframes.
+
+#### Issue Explanation
+
+- **Cause:** The `color-scheme: dark;` style on the `<html>` element influences the styling of the Refloat modal, which is embedded via an `iframe`. This can lead to visual inconsistencies, such as a grey backdrop that doesn't match your application's theme.
+- **Effect:** Users may experience a modal that doesn't align with the expected look and feel of your application, potentially impacting user experience during the cancellation flow.
+
+#### Solution: Disable Automatic Color Scheme Adjustment
+
+If you are using the `next-themes` package to manage themes in your Next.js application, you can prevent this issue by disabling the automatic application of the `color-scheme` property. This is achieved by setting the `enableColorScheme` prop to `false` in your `ThemeProvider`.
+
+##### Steps to Implement the Fix
+
+1. **Modify Your Theme Provider Component**
+
+   Update your `ThemeProvider` component to include the `enableColorScheme={false}` prop.
+
+   ```tsx
+   // app/components/theme-provider.tsx
+
+   "use client";
+
+   import * as React from "react";
+   import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+   export function ThemeProvider({
+     children,
+     ...props
+   }: React.ComponentProps<typeof NextThemesProvider>) {
+     return (
+       <NextThemesProvider {...props} enableColorScheme={false}>
+         {children}
+       </NextThemesProvider>
+     );
+   }
+   ```
+
+   **Explanation:**
+
+   - The `enableColorScheme` prop controls whether the `color-scheme` property is added to the `html` element.
+   - Setting `enableColorScheme={false}` prevents `next-themes` from automatically adjusting the `color-scheme`, thereby avoiding unintended styling on the Refloat modal.
+
+2. **Use the Updated Theme Provider in Your Application**
+
+   Ensure that you are using the modified `ThemeProvider` in your application, typically wrapping your entire app in `_app.tsx` or a similar root component.
+
+   ```tsx
+   // app/layout.tsx or pages/_app.tsx
+
+   import { ThemeProvider } from "./components/theme-provider";
+
+   function MyApp({ Component, pageProps }) {
+     return (
+       <ThemeProvider attribute="class" defaultTheme="system">
+         <Component {...pageProps} />
+       </ThemeProvider>
+     );
+   }
+
+   export default MyApp;
+   ```
+
+   **Note:**
+
+   - The `attribute="class"` prop is commonly used to control theme switching via CSS classes.
+   - Adjust the `defaultTheme` prop based on your application's requirements.
+
+3. **Test the Refloat Modal Rendering**
+
+   After implementing the above changes, test the Refloat cancellation modal in both light and dark modes to ensure it renders correctly without the grey backdrop issue.
+
+#### Alternative Solutions
+
+- **Override CSS Styles:** If not using `next-themes`, you can manually override the `color-scheme` property in your global CSS or directly on the `<html>` element.
+- **Adjust Refloat Modal Styling:** Contact Refloat support to inquire about customizing the modal's appearance to better integrate with your application's theme.
+
+#### Benefits
+
+- **Consistent User Experience:** Ensures that the Refloat modal aligns with your application's theming and provides a seamless experience for users.
+- **Maintainability:** Centralizes theme management without unintended side effects on third-party components.
+
+**By addressing these considerations, you can enhance the robustness of your integration and provide a better experience for your users.**
 
 ---
 
