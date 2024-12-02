@@ -1,5 +1,21 @@
 import { User } from 'refloat-nextjs-integration/app/types';
 
+//  NOTE: The following users are used for testing purposes ONLY
+//  and are ment to showcase the Refloat integration in a demo environment.
+//  In your production (or staging) environment(s), you should replace these
+//  with real customer data. Usually, you would fetch this data from your
+//  database or an external service (such as Stripe). And, depending on the use case, you probably
+//  will have a single user object, instead of an array of users, representing the
+//  user that is currently logged in and is subscribed to your platform services.
+//  These users are used to simulate different subscription plans and multiple test cases
+//  showing different modal flows.
+//  These plans, users and subscriptions are created in the Stripe "test" mode.
+//  They need to exist on your Stripe account, in order for the integration to work.
+//  However, similar can be achieved in the "live" mode, by using real customer
+//  Stripe IDs and subscriptions IDs. However, Stripe data will be changed in the process
+//  if you're not using the correct (**test**) "mode". So, be careful when testing with real
+//  data and be sure to set the "mode" to "test" during your testing phase.
+
 const bronzePlanUsers: User[] = [
   {
     id: 'test_cus_OTk5MjY0ZGYt',

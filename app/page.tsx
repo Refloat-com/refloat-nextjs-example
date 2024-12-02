@@ -7,25 +7,6 @@ import { UserSelector } from "refloat-nextjs-integration/app/components/UserSele
 import { PricingCard } from "refloat-nextjs-integration/app/components/PricingCard"
 import { ThemeToggle } from "refloat-nextjs-integration/app/components/ThemeToggle"
 
-declare global {
-  export interface TenantRefloatInitOptions {
-    readonly stripeCustomerId: string
-    readonly stripeSubscriptionId: string
-    readonly tenantId: string
-    readonly authHash: string
-    readonly apiKey: string
-    readonly playbookId?: string
-    readonly mode?: 'test' | 'live'
-  }
-  export interface Window {
-    refloat?: {
-      created?: boolean
-      initialized?: boolean
-      init?: (options: TenantRefloatInitOptions) => void
-    }
-  }
-}
-
 export default function Home() {
   const REFLOAT_API_KEY = process.env.NEXT_REFLOAT_API_KEY;
   const REFLOAT_TENANT_ID = process.env.NEXT_REFLOAT_TENANT_ID;
@@ -49,12 +30,10 @@ export default function Home() {
 
       const { hmac } = await response.json();
 
-      console.log('REFLOAT_API_KEY', REFLOAT_API_KEY)
-
       window.refloat?.init && window.refloat.init({
         tenantId: REFLOAT_TENANT_ID!, // Your Refloat Tenant ID
         apiKey: REFLOAT_API_KEY!, // Your Refloat API Key
-        mode: "test", // Or "test". If test mode is used, then no actions will be performed to customer's subscriptions.
+        mode: "test", // If test mode is used, then no actions will be performed to customer's subscriptions (useful for testing the integration, without affecting customer's subscription data).
         stripeCustomerId: activeTestCustomer.id, // Replace value with actual Stripe Customer ID
         stripeSubscriptionId: activeTestCustomer.subscriptionId || "", // Optional, otherwise omit. If customers may have multiple subscriptions, use this parameter to choose which subscription to launch the flow for
         authHash: hmac, // Replace value with calculated HMAC hash
